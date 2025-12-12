@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Server PRO Client (Advanced, Vercel Ready)</title>
+    <title>PDF Server PRO Client - واجهة متقدمة</title>
     <style>
         :root {
             --primary-color: #007bff;
+            --secondary-color: #6c757d;
             --success-color: #28a745;
             --error-color: #dc3545;
             --bg-color: #f8f9fa;
@@ -22,7 +23,7 @@
             text-align: right;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         h1 {
@@ -34,15 +35,17 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 20px;
         }
         .card {
             background-color: var(--card-bg);
-            padding: 20px;
+            padding: 25px;
             border-radius: 8px;
             box-shadow: var(--shadow);
             border-right: 5px solid var(--primary-color);
+            display: flex;
+            flex-direction: column;
         }
         .card h3 {
             margin-top: 0;
@@ -57,7 +60,7 @@
             margin-top: 10px;
             font-weight: bold;
         }
-        input[type="text"], input[type="number"], textarea, button {
+        input[type="text"], input[type="number"], textarea, input[type="file"], button {
             width: 100%;
             padding: 10px;
             margin-top: 5px;
@@ -84,7 +87,8 @@
             font-size: 0.9em;
             white-space: pre-wrap;
             word-wrap: break-word;
-            text-align: left; /* للحفاظ على تنسيق الـ JSON */
+            text-align: left;
+            flex-grow: 1; /* لجعل صناديق الاستجابة بنفس الارتفاع */
         }
         .success {
             background-color: #d4edda;
@@ -110,196 +114,272 @@
             border-right: 3px solid #6c757d;
             font-size: 0.9em;
         }
-        .supabase-info {
-            font-size: 0.8em;
-            color: #495057;
-            margin-top: 5px;
+        .input-toggle {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+        .toggle-btn {
+            flex: 1;
+            padding: 8px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            text-align: center;
+            background-color: #f1f1f1;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+        .toggle-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        .input-group {
+            border: 1px dashed #ced4da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>واجهة عميل PDF Server PRO (متوافقة مع Vercel و Supabase)</h1>
+        <h1>واجهة عميل PDF Server PRO المتقدمة (رفع ملفات + Vercel)</h1>
 
         <div class="note">
-            <p>**ملاحظات هامة:**</p>
-            <ul>
-                <li>**رابط السيرفر المستخدم هو:** <code style="color: var(--primary-color);">https://pdf-server-navy.vercel.app/</code></li>
-                <li>كل الروابط والثوابت الخاصة بـ Supabase موجودة ثابتة ومدمجة في كود السيرفر ولا تحتاج لإرسالها.</li>
-                <li>رابط ملف PDF افتراضي للاختبار: <code style="direction: ltr;">https://pdf-lib.org/assets/acrobat.pdf</code></li>
-            </ul>
+            <p>**الـ Endpoints النشطة:** 15 عملية متقدمة لمعالجة PDF. الواجهة تدعم الآن **الرفع المباشر للملفات** وتحويلها إلى Base64 وإرسالها للسيرفر.</p>
+            <p>**رابط السيرفر المستخدم:** <code style="color: var(--primary-color);">https://pdf-server-navy.vercel.app/</code> (جاهز للعمل).</p>
         </div>
 
         <div class="grid">
 
-            <div class="card" data-endpoint="health">
-                <h3>فحص حالة السيرفر</h3>
-                <p>يتحقق من أن السيرفر يعمل بشكل صحيح ويسجل Log في Supabase.</p>
-                <button onclick="sendRequest('health')">فحص الحالة</button>
-                <div id="health-response" class="response-box"></div>
-            </div>
-
             <div class="card" data-endpoint="compress">
                 <h3>ضغط PDF (مع رفع Supabase)</h3>
-                <p>يقلل حجم ملف PDF ويرفعه للـ Storage.</p>
-                <label for="compress-url">رابط الملف العام (publicUrl)</label>
-                <input type="text" id="compress-url" placeholder="http://..." value="https://pdf-lib.org/assets/acrobat.pdf">
-                <button onclick="sendRequest('compress')">تنفيذ الضغط</button>
+                <p>يقلل حجم الملف ويرفعه للـ Storage.</p>
+                <div id="compress-input-area"></div>
+                <button onclick="sendRequest('compress', 'compress-file-input', 'compress-url-input')">تنفيذ الضغط</button>
                 <div id="compress-response" class="response-box"></div>
             </div>
 
             <div class="card" data-endpoint="merge">
                 <h3>دمج PDF (مع رفع Supabase)</h3>
-                <p>يدمج عدة ملفات (روابط مفصولة بسطر جديد).</p>
+                <p>يدمج ملفين. (للتجربة، ارفع ملفين أو استخدم رابطين)</p>
                 <label for="merge-urls">روابط الملفات العامة (publicUrls)</label>
                 <textarea id="merge-urls" rows="3" placeholder="http://file1.pdf&#10;http://file2.pdf">https://pdf-lib.org/assets/acrobat.pdf&#10;https://pdf-lib.org/assets/acrobat.pdf</textarea>
-                <button onclick="sendRequest('merge')">تنفيذ الدمج</button>
+                <button onclick="sendRequest('merge', null, 'merge-urls')">تنفيذ الدمج</button>
                 <div id="merge-response" class="response-box"></div>
             </div>
 
             <div class="card" data-endpoint="extract-pages">
-                <h3>استخراج صفحات (مع رفع Supabase)</h3>
-                <p>استخراج صفحات محددة (مثال: 1,3-5).</p>
-                <label for="extract-pages-url">رابط الملف العام</label>
-                <input type="text" id="extract-pages-url" placeholder="http://..." value="https://pdf-lib.org/assets/acrobat.pdf">
-                <label for="extract-pages-list">الصفحات</label>
-                <input type="text" id="extract-pages-list" placeholder="1,2,5-7" value="1-2">
-                <button onclick="sendRequest('extract-pages')">تنفيذ الاستخراج</button>
+                <h3>استخراج صفحات</h3>
+                <p>استخراج صفحات محددة (مثل: 1,3-5).</p>
+                <div id="extract-pages-input-area"></div>
+                <label for="extract-pages-list">الصفحات (مثال: 1-2)</label>
+                <input type="text" id="extract-pages-list" value="1-2">
+                <button onclick="sendRequest('extract-pages', 'extract-pages-file-input', 'extract-pages-url-input')">تنفيذ الاستخراج</button>
                 <div id="extract-pages-response" class="response-box"></div>
             </div>
 
             <div class="card" data-endpoint="extract-text">
                 <h3>استخراج النصوص (JSON)</h3>
-                <p>استخلاص جميع النصوص والميتاداتا من الملف.</p>
-                <label for="extract-text-url">رابط الملف العام</label>
-                <input type="text" id="extract-text-url" placeholder="http://..." value="https://pdf-lib.org/assets/acrobat.pdf">
-                <button onclick="sendRequest('extract-text')">تنفيذ استخراج النص</button>
+                <p>استخلاص جميع النصوص والميتاداتا.</p>
+                <div id="extract-text-input-area"></div>
+                <button onclick="sendRequest('extract-text', 'extract-text-file-input', 'extract-text-url-input')">تنفيذ استخراج النص</button>
                 <div id="extract-text-response" class="response-box"></div>
             </div>
 
-            <div class="card" data-endpoint="info">
-                <h3>معلومات الملف (JSON)</h3>
-                <p>الحصول على عدد الصفحات والحجم بالبايت والميجا.</p>
-                <label for="info-url">رابط الملف العام</label>
-                <input type="text" id="info-url" placeholder="http://..." value="https://pdf-lib.org/assets/acrobat.pdf">
-                <button onclick="sendRequest('info')">تنفيذ الاستعلام</button>
-                <div id="info-response" class="response-box"></div>
-            </div>
-
-            <div class="card" data-endpoint="protect">
-                <h3>حماية منطقية (مع رفع Supabase)</h3>
-                <p>إضافة صفحة تحذير وكلمة مرور في الميتاداتا.</p>
-                <label for="protect-url">رابط الملف العام</label>
-                <input type="text" id="protect-url" placeholder="http://..." value="https://pdf-lib.org/assets/acrobat.pdf">
-                <label for="protect-password">كلمة المرور</label>
-                <input type="text" id="protect-password" value="secret123">
-                <button onclick="sendRequest('protect')">تنفيذ الحماية</button>
-                <div id="protect-response" class="response-box"></div>
-            </div>
-
-            <div class="card" data-endpoint="unlock">
-                <h3>إلغاء الحماية (مع رفع Supabase)</h3>
-                <p>إزالة صفحة التحذير الأولى وتنظيف الميتاداتا.</p>
-                <label for="unlock-url">رابط الملف العام</label>
-                <input type="text" id="unlock-url" placeholder="http://..." value="https://pdf-lib.org/assets/acrobat.pdf">
-                <button onclick="sendRequest('unlock')">تنفيذ الإلغاء</button>
-                <div id="unlock-response" class="response-box"></div>
-            </div>
-
             <div class="card" data-endpoint="watermark-text">
-                <h3>علامة مائية (نص) - مع رفع Supabase</h3>
-                <p>إضافة علامة مائية نصية مائلة على كل الصفحات.</p>
-                <label for="watermark-url">رابط الملف العام</label>
-                <input type="text" id="watermark-url" placeholder="http://..." value="https://pdf-lib.org/assets/acrobat.pdf">
+                <h3>علامة مائية (نص)</h3>
+                <p>إضافة علامة مائية نصية مائلة.</p>
+                <div id="watermark-text-input-area"></div>
                 <label for="watermark-text">النص</label>
-                <input type="text" id="watermark-text" value="CONFIDENTIAL">
+                <input type="text" id="watermark-text-param" value="CONFIDENTIAL">
                 <label for="watermark-opacity">الشفافية (0.1-1.0)</label>
                 <input type="number" id="watermark-opacity" step="0.1" min="0.1" max="1.0" value="0.2">
-                <button onclick="sendRequest('watermark-text')">تنفيذ العلامة المائية</button>
+                <button onclick="sendRequest('watermark-text', 'watermark-text-file-input', 'watermark-text-url-input')">تنفيذ العلامة المائية</button>
                 <div id="watermark-text-response" class="response-box"></div>
             </div>
 
             <div class="card" data-endpoint="rotate-pages">
-                <h3>تدوير الصفحات (مع رفع Supabase)</h3>
+                <h3>تدوير الصفحات</h3>
                 <p>تدوير صفحات محددة بزاوية (90, 180, 270).</p>
-                <label for="rotate-url">رابط الملف العام</label>
-                <input type="text" id="rotate-url" placeholder="http://..." value="https://pdf-lib.org/assets/acrobat.pdf">
+                <div id="rotate-pages-input-area"></div>
                 <label for="rotate-angle">الزاوية (بالدرجات)</label>
                 <input type="number" id="rotate-angle" value="90">
-                <label for="rotate-pages-list">الصفحات (اختياري، مثل: 1,3)</label>
+                <label for="rotate-pages-list">الصفحات (اختياري)</label>
                 <input type="text" id="rotate-pages-list" placeholder="اتركها فارغة للكل">
-                <button onclick="sendRequest('rotate-pages')">تنفيذ التدوير</button>
+                <button onclick="sendRequest('rotate-pages', 'rotate-pages-file-input', 'rotate-pages-url-input')">تنفيذ التدوير</button>
                 <div id="rotate-pages-response" class="response-box"></div>
             </div>
 
             <div class="card" data-endpoint="reorder-pages">
-                <h3>إعادة ترتيب الصفحات (مع رفع Supabase)</h3>
+                <h3>إعادة ترتيب الصفحات</h3>
                 <p>تحديد ترتيب الصفحات الجديد (مثال: 3,1,2).</p>
-                <label for="reorder-url">رابط الملف العام</label>
-                <input type="text" id="reorder-url" placeholder="http://..." value="https://pdf-lib.org/assets/acrobat.pdf">
+                <div id="reorder-pages-input-area"></div>
                 <label for="reorder-order">الترتيب الجديد (مثال: 3,1,2)</label>
                 <input type="text" id="reorder-order" placeholder="ترتيب الصفحات" value="2,1">
-                <button onclick="sendRequest('reorder-pages')">تنفيذ إعادة الترتيب</button>
+                <button onclick="sendRequest('reorder-pages', 'reorder-pages-file-input', 'reorder-pages-url-input')">تنفيذ إعادة الترتيب</button>
                 <div id="reorder-pages-response" class="response-box"></div>
             </div>
 
             <div class="card" data-endpoint="metadata">
-                <h3>تعديل الميتاداتا (مع رفع Supabase)</h3>
+                <h3>تعديل الميتاداتا</h3>
                 <p>تغيير العنوان والمؤلف والموضوع.</p>
-                <label for="metadata-url">رابط الملف العام</label>
-                <input type="text" id="metadata-url" placeholder="http://..." value="https://pdf-lib.org/assets/acrobat.pdf">
+                <div id="metadata-input-area"></div>
                 <label for="metadata-title">العنوان</label>
                 <input type="text" id="metadata-title" value="New PDF Title">
                 <label for="metadata-author">المؤلف (اختياري)</label>
                 <input type="text" id="metadata-author" value="Author Name">
-                <button onclick="sendRequest('metadata')">تعديل الميتاداتا</button>
+                <button onclick="sendRequest('metadata', 'metadata-file-input', 'metadata-url-input')">تعديل الميتاداتا</button>
                 <div id="metadata-response" class="response-box"></div>
             </div>
 
+            <div class="card" data-endpoint="info">
+                <h3>معلومات الملف (JSON)</h3>
+                <p>الحصول على عدد الصفحات والحجم.</p>
+                <div id="info-input-area"></div>
+                <button onclick="sendRequest('info', 'info-file-input', 'info-url-input')">تنفيذ الاستعلام</button>
+                <div id="info-response" class="response-box"></div>
+            </div>
+
+            <div class="card" data-endpoint="health">
+                <h3>فحص حالة السيرفر (GET)</h3>
+                <p>تأكيد أن السيرفر يعمل ويتصل بـ Supabase.</p>
+                <button onclick="sendRequest('health', null, null)">فحص الحالة</button>
+                <div id="health-response" class="response-box"></div>
+            </div>
+            
+            <div class="card" data-endpoint="protect">
+                <h3>حماية (منطقية)</h3>
+                <p>إضافة صفحة تحذير وكلمة مرور في الميتاداتا.</p>
+                <div id="protect-input-area"></div>
+                <label for="protect-password">كلمة المرور (للتسجيل)</label>
+                <input type="text" id="protect-password" value="secret123">
+                <button onclick="sendRequest('protect', 'protect-file-input', 'protect-url-input')">تنفيذ الحماية</button>
+                <div id="protect-response" class="response-box"></div>
+            </div>
+
+            <div class="card" data-endpoint="unlock">
+                <h3>إلغاء الحماية</h3>
+                <p>إزالة صفحة التحذير الأولى وتنظيف الميتاداتا.</p>
+                <div id="unlock-input-area"></div>
+                <button onclick="sendRequest('unlock', 'unlock-file-input', 'unlock-url-input')">تنفيذ الإلغاء</button>
+                <div id="unlock-response" class="response-box"></div>
+            </div>
+            
             <div class="card" data-endpoint="extract-images">
-                <h3>استخراج الصور (محاكاة ورفع Supabase)</h3>
-                <p>محاكاة استخراج الصور ورفعها كـ PNGs إلى Supabase.</p>
-                <label for="extract-images-url">رابط الملف العام</label>
-                <input type="text" id="extract-images-url" placeholder="http://..." value="https://pdf-lib.org/assets/acrobat.pdf">
-                <button onclick="sendRequest('extract-images')">تنفيذ الاستخراج</button>
+                <h3>استخراج الصور (محاكاة)</h3>
+                <p>محاكاة استخراج الصور ورفعها إلى Supabase.</p>
+                <div id="extract-images-input-area"></div>
+                <button onclick="sendRequest('extract-images', 'extract-images-file-input', 'extract-images-url-input')">تنفيذ الاستخراج</button>
                 <div id="extract-images-response" class="response-box"></div>
             </div>
 
             <div class="card" data-endpoint="pdf-to-base64">
                 <h3>PDF إلى Base64 (JSON)</h3>
-                <p>تحويل الملف إلى سلسلة Base64 مشفرة.</p>
-                <label for="pdf-to-base64-url">رابط الملف العام</label>
-                <input type="text" id="pdf-to-base64-url" placeholder="http://..." value="https://pdf-lib.org/assets/acrobat.pdf">
-                <button onclick="sendRequest('pdf-to-base64')">تحويل إلى Base64</button>
+                <p>تحويل الملف إلى سلسلة Base64 مشفرة (يعمل مع الملف المرفوع).</p>
+                <div id="pdf-to-base64-input-area"></div>
+                <button onclick="sendRequest('pdf-to-base64', 'pdf-to-base64-file-input', 'pdf-to-base64-url-input')">تحويل إلى Base64</button>
                 <div id="pdf-to-base64-response" class="response-box"></div>
             </div>
 
             <div class="card" data-endpoint="base64-to-pdf">
                 <h3>Base64 إلى PDF (رفع Supabase)</h3>
                 <p>رفع ملف PDF إلى Supabase من بيانات Base64.</p>
-                <label for="base64-file-name">اسم الملف النهائي (في Supabase)</label>
+                <label for="base64-file-name">اسم الملف النهائي</label>
                 <input type="text" id="base64-file-name" value="uploaded_from_base64_demo.pdf">
-                <label for="base64-input">بيانات Base64 (لملف PDF صغير)</label>
+                <label for="base64-input">بيانات Base64</label>
                 <textarea id="base64-input" rows="3" placeholder="أدخل سلسلة Base64 هنا..."></textarea>
-                <button onclick="sendRequest('base64-to-pdf')">تحويل ورفع</button>
+                <button onclick="sendRequest('base64-to-pdf', null, null)">تحويل ورفع</button>
                 <div id="base64-to-pdf-response" class="response-box"></div>
             </div>
-
+            
         </div>
     </div>
 
     <script>
         // =========================================================
-        //          *** الرابط الصحيح الذي قدمته الآن ***
+        //          *** رابط السيرفر المنشور على Vercel ***
         // =========================================================
         const SERVER_URL = 'https://pdf-server-navy.vercel.app'; 
         // =========================================================
         
         /**
-         * دالة مساعدة لعرض النتائج والأخطاء
+         * دالة مساعدة لإنشاء واجهة التبديل بين رفع الملف و URL
          */
+        function createInputToggle(endpoint) {
+            const container = document.getElementById(`${endpoint}-input-area`);
+            if (!container) return; // لبعض الـ endpoints مثل health و merge لا تحتاج هذه الميزة
+
+            const html = `
+                <div class="input-toggle">
+                    <div class="toggle-btn active" data-type="url" onclick="toggleInput('${endpoint}', 'url')">رابط عام (URL)</div>
+                    <div class="toggle-btn" data-type="file" onclick="toggleInput('${endpoint}', 'file')">رفع ملف (Upload)</div>
+                </div>
+                <div class="input-group url-group" id="${endpoint}-url-group">
+                    <label>رابط الملف (Public URL)</label>
+                    <input type="text" id="${endpoint}-url-input" value="https://pdf-lib.org/assets/acrobat.pdf">
+                </div>
+                <div class="input-group file-group" id="${endpoint}-file-group" style="display: none;">
+                    <label>اختر ملف PDF</label>
+                    <input type="file" id="${endpoint}-file-input" accept="application/pdf">
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        /**
+         * دالة لتبديل عرض خيارات الإدخال (URL vs File)
+         */
+        function toggleInput(endpoint, type) {
+            const urlGroup = document.getElementById(`${endpoint}-url-group`);
+            const fileGroup = document.getElementById(`${endpoint}-file-group`);
+            const buttons = document.querySelectorAll(`#${endpoint}-input-area .toggle-btn`);
+
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            if (type === 'url') {
+                document.querySelector(`#${endpoint}-input-area .toggle-btn[data-type="url"]`).classList.add('active');
+                urlGroup.style.display = 'block';
+                fileGroup.style.display = 'none';
+            } else {
+                document.querySelector(`#${endpoint}-input-area .toggle-btn[data-type="file"]`).classList.add('active');
+                urlGroup.style.display = 'none';
+                fileGroup.style.display = 'block';
+            }
+        }
+
+        /**
+         * دالة لتحويل ملف إلى Base64
+         */
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]); // إزالة Data URL Prefix
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // تهيئة واجهات الإدخال عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', () => {
+            const endpointsToInit = [
+                'compress', 'extract-pages', 'extract-text', 'watermark-text',
+                'rotate-pages', 'reorder-pages', 'metadata', 'info',
+                'protect', 'unlock', 'extract-images', 'pdf-to-base64'
+            ];
+            endpointsToInit.forEach(createInputToggle);
+        });
+
+        // =========================================================
+        // الدعم الفني: دوال عرض النتائج والتحميل موجودة كما هي
+        // =========================================================
+
         function displayResponse(endpoint, data, isError = false) {
+            // ... (نفس دالة العرض من الكود السابق)
             const responseBox = document.getElementById(`${endpoint}-response`);
             responseBox.className = 'response-box';
             if (isError) {
@@ -315,10 +395,8 @@
             }
         }
 
-        /**
-         * دالة مساعدة لتحميل ملف PDF الناتج
-         */
         function downloadFile(blob, filename, info = {}) {
+            // ... (نفس دالة التحميل من الكود السابق)
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.style.display = 'none';
@@ -338,11 +416,12 @@
 
             return `تم تنفيذ العملية بنجاح! <br>تم تحميل الملف باسم **${filename}** في جهازك. ${infoString}`;
         }
+        
+        // =========================================================
+        // الدالة الرئيسية: تم تحديثها لدعم Base64 و Public URL
+        // =========================================================
 
-        /**
-         * الدالة الرئيسية لإرسال الطلبات
-         */
-        async function sendRequest(endpoint) {
+        async function sendRequest(endpoint, fileInputId, urlInputId) {
             const responseBox = document.getElementById(`${endpoint}-response`);
             responseBox.className = 'response-box loading';
             responseBox.innerHTML = 'جاري المعالجة... يرجى الانتظار.';
@@ -350,97 +429,92 @@
             const url = `${SERVER_URL}/${endpoint}`;
             let payload = {};
             let isFileOperation = true; 
-            let filename = `${endpoint}.pdf`;
-
+            let filename = `${endpoint}_output.pdf`;
+            
             try {
-                // تجميع البيانات حسب نقطة الوصول
-                switch (endpoint) {
-                    case 'compress':
-                    case 'protect':
-                    case 'unlock':
-                    case 'extract-images':
-                        payload.publicUrl = document.getElementById(`${endpoint}-url`).value;
-                        filename = `output-${endpoint}.pdf`;
-                        break;
+                // 1. تحديد مصدر الملف (URL أو Base64)
+                if (fileInputId && urlInputId) {
+                    const isFileUpload = document.getElementById(`${endpoint}-file-group`).style.display !== 'none';
                     
-                    case 'extract-text':
-                    case 'info':
-                    case 'pdf-to-base64': // هذا يرجع JSON
-                        payload.publicUrl = document.getElementById(`${endpoint}-url`).value;
-                        isFileOperation = false;
-                        break;
+                    if (isFileUpload) {
+                        const fileInput = document.getElementById(fileInputId);
+                        const file = fileInput.files[0];
+
+                        if (!file) throw new Error('يرجى اختيار ملف PDF للرفع.');
                         
+                        responseBox.innerHTML = 'جاري تحويل الملف إلى Base64...';
+                        const base64Data = await fileToBase64(file);
+                        payload.fileBase64 = base64Data;
+                        // نستخدم اسم الملف المرفوع كافتراضي للتحميل
+                        filename = file.name.replace('.pdf', `_${endpoint}.pdf`);
+                        
+                    } else {
+                        const publicUrl = document.getElementById(urlInputId).value;
+                        if (!publicUrl) throw new Error('يرجى إدخال رابط ملف صالح.');
+                        payload.publicUrl = publicUrl;
+                    }
+                }
+
+                // 2. تجميع البيانات الإضافية
+                switch (endpoint) {
+                    // عمليات ترجع JSON
                     case 'health':
                         isFileOperation = false; 
                         break;
-
+                    case 'extract-text':
+                    case 'info':
+                    case 'pdf-to-base64':
+                        isFileOperation = false;
+                        break;
+                    case 'base64-to-pdf':
+                        payload.base64 = document.getElementById('base64-input').value;
+                        payload.fileName = document.getElementById('base64-file-name').value;
+                        isFileOperation = false;
+                        break;
+                    // عمليات تتطلب بيانات إضافية
                     case 'merge':
                         const urlsText = document.getElementById('merge-urls').value;
                         payload.publicUrls = urlsText.split('\n').map(u => u.trim()).filter(u => u);
                         filename = 'merged.pdf';
+                        // لا يمكن دمج ملفات مرفوعة مع ملفات URL بسهولة لذا نعتمد على URL فقط هنا
                         break;
-
                     case 'extract-pages':
-                        payload.publicUrl = document.getElementById('extract-pages-url').value;
                         payload.pages = document.getElementById('extract-pages-list').value;
-                        filename = 'extracted_pages.pdf';
                         break;
-                        
                     case 'watermark-text':
-                        payload.publicUrl = document.getElementById('watermark-url').value;
-                        payload.text = document.getElementById('watermark-text').value;
+                        payload.text = document.getElementById('watermark-text-param').value;
                         payload.opacity = parseFloat(document.getElementById('watermark-opacity').value);
-                        filename = 'watermarked.pdf';
                         break;
-
                     case 'rotate-pages':
-                        payload.publicUrl = document.getElementById('rotate-url').value;
                         payload.angle = document.getElementById('rotate-angle').value;
                         payload.pages = document.getElementById('rotate-pages-list').value;
-                        filename = 'rotated.pdf';
                         break;
-
                     case 'reorder-pages':
-                        payload.publicUrl = document.getElementById('reorder-url').value;
                         payload.order = document.getElementById('reorder-order').value.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n));
-                        filename = 'reordered.pdf';
                         break;
-
                     case 'metadata':
-                        payload.publicUrl = document.getElementById('metadata-url').value;
                         payload.title = document.getElementById('metadata-title').value;
                         payload.author = document.getElementById('metadata-author').value;
-                        filename = 'metadata_updated.pdf';
                         break;
-                        
-                    case 'base64-to-pdf': // هذا يرجع JSON
-                        payload.base64 = document.getElementById('base64-input').value;
-                        payload.fileName = document.getElementById('base64-file-name').value;
-                        isFileOperation = false; 
+                    case 'protect':
+                        payload.password = document.getElementById('protect-password').value;
                         break;
                 }
                 
-                // تحديد نوع الطلب (GET لـ health، POST للباقي)
+                // 3. إرسال الطلب
                 const method = (endpoint === 'health') ? 'GET' : 'POST';
                 
                 const response = await fetch(url, {
                     method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    // إرسال body فقط مع طلبات POST
+                    headers: { 'Content-Type': 'application/json' },
                     body: (method === 'POST') ? JSON.stringify(payload) : null,
                 });
                 
-                // --- معالجة استجابات ملفات PDF (Stream) ---
+                // 4. معالجة الاستجابة
                 if (isFileOperation) {
                     if (!response.ok) {
                         let errorData = {};
-                        try {
-                            errorData = await response.json();
-                        } catch (e) {
-                            errorData = { error: `HTTP Error: ${response.status} ${response.statusText}`, details: 'Check console for network details.' };
-                        }
+                        try { errorData = await response.json(); } catch (e) { errorData = { error: `HTTP Error: ${response.status} ${response.statusText}` }; }
                         displayResponse(endpoint, errorData, true);
                         return;
                     }
@@ -456,7 +530,7 @@
                     return;
                 } 
                 
-                // --- معالجة استجابات JSON ---
+                // حالة JSON (health, info, extract-text, base64-to-pdf)
                 const data = await response.json();
 
                 if (!response.ok || data.ok === false) {
@@ -467,9 +541,9 @@
 
             } catch (error) {
                 console.error(`Error in ${endpoint}:`, error);
-                displayResponse(endpoint, { error: `فشل الاتصال بالسيرفر: ${SERVER_URL}` }, true);
+                displayResponse(endpoint, { error: `فشل التنفيذ أو الاتصال بالسيرفر: ${error.message}` }, true);
             }
         }
     </script>
 </body>
-  </html>
+</html>
